@@ -322,6 +322,10 @@ public class LDHelper {
         return prefix + queryString;
     }
 
+    public static String randomURNUUID() {
+        return "urn:uuid:"+UUID.randomUUID().toString();
+    }
+
     public static String concatWithReplace(List<UUID> orgs,
                                            String sep,
                                            String replace) {
@@ -427,6 +431,11 @@ public class LDHelper {
     public static String propertyName(String name) {
         name = StringUtils.uncapitalize(name);
         return removeInvalidCharacters(name);
+    }
+
+    public static String preferredName(String name) {
+        String splittedName = String.join(" ",name.split("(?<!(^|[A-Z]))(?=[A-Z])|(?<!^)(?=[A-Z][a-z])"));
+        return Character.toUpperCase(splittedName.charAt(0))+splittedName.substring(1);
     }
 
     /**
@@ -655,5 +664,7 @@ public class LDHelper {
         }
         return model;
     }
+
+
 
 }

@@ -91,6 +91,7 @@ dependencies {
     compile "org.jboss.forge.roaster:roaster-jdt:2.19.4.Final"
     compile "org.reflections:reflections:0.9.11"
     compile "com.google.guava:guava:24.1-jre"
+    compile group: 'com.sun.xsom', name: 'xsom', version: '20140925'
 
     testCompile "org.springframework.boot:spring-boot-starter-test"
     testCompile "com.jayway.jsonpath:json-path-assert:2.4.0"
