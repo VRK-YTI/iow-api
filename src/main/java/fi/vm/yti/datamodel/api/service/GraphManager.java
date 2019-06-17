@@ -18,6 +18,9 @@ import org.apache.jena.update.*;
 
 import java.io.IOException;
 import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -1312,6 +1315,14 @@ public class GraphManager {
 
     }
 
+    public void addToGraph(Model model,
+                           String id) {
+        logger.debug("Adding to " + id);
+        DatasetGraphAccessorHTTP accessor = new DatasetGraphAccessorHTTP(endpointServices.getCoreReadWriteAddress());
+        DatasetAdapter adapter = new DatasetAdapter(accessor);
+        adapter.add(id, model);
+    }
+
     /**
      * Constructs JSON-LD from graph
      *
@@ -1530,6 +1541,25 @@ public class GraphManager {
     public void deleteModel(AbstractModel amodel) {
         serviceDescriptionManager.deleteGraphDescription(amodel.getId());
         removeModel(amodel.getIRI());
+    }
+
+    public void importDataset(String namespace, Dataset dataset) {
+        if(!dataset.containsNamedModel(namespace+"HasPartGraph")) {
+            throw new IllegalArgumentException("No HasPartGraph defined!");
+        }
+        if(!isExistingGraph(namespace)) {
+            throw new IllegalArgumentException("Cannot import if model is not defined!");
+        }
+
+        Model hasPartGraph = dataset.getNamedModel(namespace+"HasPartGraph");
+        dataset.removeNamedModel(namespace+"HasPartGraph");
+        addToGraph(hasPartGraph, namespace+"HasPartGraph");
+
+        Iterator<String> graphNames = dataset.listNames();
+        while(graphNames.hasNext()) {
+            String graphName = graphNames.next();
+            putToGraph(dataset.getNamedModel(graphName), graphName);
+        }
     }
 
 }

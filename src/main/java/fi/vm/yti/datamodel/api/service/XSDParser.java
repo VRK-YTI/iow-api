@@ -9,6 +9,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 
+import javax.jws.WebParam;
 import javax.xml.parsers.SAXParserFactory;
 
 import org.apache.jena.datatypes.RDFDatatype;
@@ -25,11 +26,13 @@ import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.rdf.model.Literal;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.rdf.model.NodeIterator;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.sparql.graph.GraphFactory;
+import org.apache.jena.vocabulary.DCTerms;
 import org.apache.jena.vocabulary.OWL;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
@@ -66,6 +69,8 @@ import fi.vm.yti.datamodel.api.utils.XSDAnnotationFactory;
 public class XSDParser {
     private static final Logger logger = LoggerFactory.getLogger(XSDParser.class.getName());
     private Dataset dataset;
+    private Model hasPartGraph;
+    private Model modelGraph;
     private XSOMParser parser;
     private XSSchemaSet xsdModel;
     private String namespace;
@@ -74,13 +79,17 @@ public class XSDParser {
 
     XSDParser() {}
 
-    XSDParser(String namespace, String prefix) {
+    XSDParser(String namespace, String prefix, String language) {
         this.dataset = DatasetFactory.createGeneral();
+        this.hasPartGraph = ModelFactory.createDefaultModel();
+        this.modelGraph = ModelFactory.createDefaultModel();
+        this.dataset.addNamedModel(namespace.replaceFirst("#",""), this.modelGraph);
+        this.dataset.addNamedModel(namespace+"HasPartGraph",this.hasPartGraph);
         this.parser = new XSOMParser(SAXParserFactory.newInstance());
         parser.setAnnotationParser(new XSDAnnotationFactory());
         this.namespace = namespace;
         this.prefix = prefix;
-        this.language = "fi";
+        this.language = language;
     }
 
     public void parseXSDFromFile(File file) {
@@ -131,10 +140,10 @@ public class XSDParser {
         for(XSSchema schema : schemas) {
 
             String targetNamespace = schema.getTargetNamespace();
+            logger.debug("Parsing "+targetNamespace);
 
             // Ignore XSD namespace
-            if(!XSD.getURI().startsWith(targetNamespace)) {
-                logger.debug("Parsing "+targetNamespace);
+            if(targetNamespace.isEmpty() || !targetNamespace.isEmpty() && !XSD.getURI().startsWith(targetNamespace)) {
 
                 /*
                 Iterator<XSSimpleType> simpleTypes = schema.iterateSimpleTypes();
@@ -301,7 +310,7 @@ public class XSDParser {
             if(this.dataset.containsNamedModel(predicateURI)) {
                 logger.debug("EXISTS DatatypeProperty: "+predicateURI);
             } else {
-                Resource datatypeProperty = createResource(predicateURI, OWL.DatatypeProperty);
+                Resource datatypeProperty = createResource(this.namespace, localName, OWL.DatatypeProperty);
                 datatypeProperty.addProperty(RDFS.range,baseTypeToResource(attribute.getType().getBaseType().getName()));
             }
 
@@ -365,21 +374,22 @@ public class XSDParser {
                 shape.addProperty(SH.property,propertyShape);
 
                 if(type.isComplexType()) {
-                    String resourceName = this.namespace+LDHelper.resourceName(name);
+                    String subLocalName = LDHelper.resourceName(name);
+                    String resourceURI = this.namespace+subLocalName;
                     boolean newResource = true;
 
-                    if(this.dataset.containsNamedModel(resourceName)) {
-                        logger.info("EXISTS: "+resourceName);
+                    if(this.dataset.containsNamedModel(resourceURI)) {
+                        logger.info("EXISTS: "+resourceURI);
                         newResource = false;
                     }
 
-                    Resource subResource = createResource(resourceName,RDFS.Resource);
+                    Resource subResource = createResource(this.namespace, subLocalName,RDFS.Resource);
                     propertyShape.addProperty(SH.target,subResource);
 
                     if(this.dataset.containsNamedModel(predicateURI)) {
                         logger.debug("EXISTS ObjectProperty: "+predicateURI);
                     } else {
-                        Resource objectProperty = createResource(predicateURI, OWL.ObjectProperty);
+                        Resource objectProperty = createResource(this.namespace, subLocalName, OWL.ObjectProperty);
                         objectProperty.addProperty(RDFS.range, subResource);
                     }
 
@@ -390,7 +400,7 @@ public class XSDParser {
                     if(this.dataset.containsNamedModel(predicateURI)) {
                         logger.debug("EXISTS DatatypeProperty: "+predicateURI);
                     } else {
-                        Resource datatypeProperty = createResource(predicateURI, OWL.DatatypeProperty);
+                        Resource datatypeProperty = createResource(this.namespace, localName, OWL.DatatypeProperty);
                         datatypeProperty.addProperty(RDFS.range,baseTypeToResource(type.getBaseType().getName()));
                     }
                     convertSimpleType(type.asSimpleType(), propertyShape);
@@ -403,10 +413,11 @@ public class XSDParser {
     private void convertElement(XSElementDecl element) {
         String targetNamespace = element.getTargetNamespace();
         String name = element.getName();
+        String localName = LDHelper.resourceName(name);
         String prefName = LDHelper.preferredName(name);
         XSType elementType = element.getType();
 
-        Resource shape = createResource(this.namespace+name, RDFS.Resource);
+        Resource shape = createResource(this.namespace, localName, RDFS.Resource);
         shape.addLiteral(SH.name,ResourceFactory.createLangLiteral(prefName,this.language));
 
         logger.debug("Converting "+name+" from "+targetNamespace);
@@ -427,22 +438,35 @@ public class XSDParser {
         }
     }
 
-    private Resource createResource(String uri, Resource type) {
+    private Resource createResource(String namespace, String localName, Resource type) {
         Model model = ModelFactory.createDefaultModel();
         model.setNsPrefixes(LDHelper.PREFIX_MAP);
-        this.dataset.addNamedModel(uri,model);
-        return model.createResource(uri, type);
+        String resourceUri = namespace+localName;
+        this.dataset.addNamedModel(resourceUri,model);
+        Resource res = model.createResource(resourceUri, type);
+        this.hasPartGraph.add(ResourceFactory.createResource(namespace), DCTerms.hasPart, ResourceFactory.createResource(resourceUri));
+        return res;
     }
 
 
     public void debug() {
+        NodeIterator nit = this.hasPartGraph.listObjectsOfProperty(DCTerms.hasPart);
+        while(nit.hasNext()) {
+            logger.debug(nit.next().asResource().getURI());
+        }
+        /*
         Iterator<String> it = this.dataset.listNames();
         logger.debug("Empty: "+this.dataset.isEmpty());
         logger.debug("GRAPHS:");
         while(it.hasNext()) {
             String graph = it.next();
             this.dataset.getNamedModel(graph).write(System.out,"TURTLE");
-        }
+        } */
+    }
+
+
+    public Dataset getGeneratedDataset() {
+        return this.dataset;
     }
 
 
