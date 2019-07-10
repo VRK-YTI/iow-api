@@ -27,6 +27,9 @@
         "isDefinedBy": {
           "type": "keyword"
         },
+        "contributor": {
+          "type": "keyword"
+        },
         "status": {
           "type": "keyword"
         },

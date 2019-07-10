@@ -276,6 +276,7 @@ public class SearchIndexManager {
             "?class dcterms:modified ?modified . " +
             "?class owl:versionInfo ?status . " +
             "?class a ?type . " +
+            "?class dcterms:contributor ?orgID . " +
             "} WHERE { " +
             "GRAPH ?class { ?class rdf:type ?classType . VALUES ?classType { sh:NodeShape rdfs:Class }" +
             "?class sh:name ?prefLabel . " +
@@ -285,7 +286,8 @@ public class SearchIndexManager {
             "?class dcterms:modified ?modified . " +
             "?class rdfs:isDefinedBy ?model . }" +
             "GRAPH ?model {?model a owl:Ontology  . ?model rdfs:label ?label . " +
-            "?model a ?modelType . VALUES ?modelType { dcap:MetadataVocabulary dcap:DCAP }}}";
+            "?model a ?modelType . VALUES ?modelType { dcap:MetadataVocabulary dcap:DCAP } . " +
+            "?model dcterms:contributor ?org . BIND(strafter(str(?org), 'urn:uuid:') AS ?orgID) }}";
         Model model = jenaClient.constructFromCore(qry);
         if (model.size() < 1) {
             logger.warn("Could not find any classes to index!");
@@ -309,6 +311,7 @@ public class SearchIndexManager {
             "?predicate rdfs:comment ?definition . " +
             "?predicate rdfs:isDefinedBy ?model . " +
             "?predicate owl:versionInfo ?status . " +
+            "?predicate dcterms:contributor ?orgID . " +
             "} WHERE { " +
             "GRAPH ?predicate { ?predicate a ?predicateType . VALUES ?predicateType { owl:ObjectProperty owl:DatatypeProperty }" +
             "?predicate rdfs:label ?prefLabel . " +
@@ -318,7 +321,8 @@ public class SearchIndexManager {
             "OPTIONAL { ?predicate rdfs:comment ?definition . FILTER(lang(?definition)!='')}" +
             "?class rdfs:isDefinedBy ?model . }" +
             "GRAPH ?model {?model a owl:Ontology  . ?model rdfs:label ?label . " +
-            "?model a ?modelType . VALUES ?modelType { dcap:MetadataVocabulary dcap:DCAP }}}";
+            "?model a ?modelType . VALUES ?modelType { dcap:MetadataVocabulary dcap:DCAP } ." +
+            "?model dcterms:contributor ?org . BIND(strafter(str(?org), 'urn:uuid:') AS ?orgID) }}";
         Model model = jenaClient.constructFromCore(qry);
         if (model.size() < 1) {
             logger.warn("Could not find any associations to index!");

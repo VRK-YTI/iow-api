@@ -755,6 +755,7 @@ public class Frames {
                 put("modified", modified);
                 put("status", versionInfo);
                 put("isDefinedBy", isDefinedBy);
+                put("contributor", contributorID);
                 putAll(jsonLdKeys);
             }
         };
@@ -763,6 +764,7 @@ public class Frames {
             {
                 put("@context", esClassContext);
                 put("isDefinedBy", new LinkedHashMap<String, Object>());
+                put("contributor", new LinkedHashMap<String, Object>());
             }
         };
 
@@ -794,6 +796,7 @@ public class Frames {
                 put("range", range);
                 put("status", versionInfo);
                 put("isDefinedBy", isDefinedBy);
+                put("contributor", contributorID);
                 putAll(jsonLdKeys);
             }
         };
@@ -802,6 +805,7 @@ public class Frames {
             {
                 put("@context", esPredicateContext);
                 put("isDefinedBy", new LinkedHashMap<String, Object>());
+                put("contributor", new LinkedHashMap<String, Object>());
             }
         };
 
