@@ -99,4 +99,8 @@ public class AuthorizationManager {
     public boolean hasRightToDropDatabase() {
         return getUser().isSuperuser();
     }
+
+    public boolean hasRightToImport() {
+        return getUser().isSuperuser();
+    }
 }

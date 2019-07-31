@@ -13,7 +13,7 @@ public class XSDUBLParserTest {
     @Test
     public void parseUBLSchemas() {
 
-        XSDParser xsdParser = new XSDParser("http://example.org#","ex","en");
+        XSDParser xsdParser = new XSDParser("http://example.org#","en");
 
         xsdParser.parseXSDFromFile(new File("src/test/resources/ubl/UBL-CommonAggregateComponents-2.1.xsd"));
 

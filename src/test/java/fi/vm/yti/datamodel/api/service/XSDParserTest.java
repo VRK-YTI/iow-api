@@ -13,7 +13,7 @@ public class XSDParserTest {
     @Test
     public void parseVRKSchemas() {
 
-        XSDParser xsdParser = new XSDParser("http://example.org#","ex","fi");
+        XSDParser xsdParser = new XSDParser("http://example.org#","fi");
 
         xsdParser.parseXSDFromFile(new File("src/test/resources/vrk/PERUSSANOMA.xsd"));
 

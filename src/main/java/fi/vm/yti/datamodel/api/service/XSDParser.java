@@ -74,12 +74,15 @@ public class XSDParser {
     private XSOMParser parser;
     private XSSchemaSet xsdModel;
     private String namespace;
-    private String prefix;
     private String language;
 
     XSDParser() {}
 
-    XSDParser(String namespace, String prefix, String language) {
+    XSDParser(String namespace, String language) {
+        init(namespace,language);
+    }
+
+    public void init(String namespace, String language) {
         this.dataset = DatasetFactory.createGeneral();
         this.hasPartGraph = ModelFactory.createDefaultModel();
         this.modelGraph = ModelFactory.createDefaultModel();
@@ -88,7 +91,6 @@ public class XSDParser {
         this.parser = new XSOMParser(SAXParserFactory.newInstance());
         parser.setAnnotationParser(new XSDAnnotationFactory());
         this.namespace = namespace;
-        this.prefix = prefix;
         this.language = language;
     }
 
@@ -374,8 +376,18 @@ public class XSDParser {
                 shape.addProperty(SH.property,propertyShape);
 
                 if(type.isComplexType()) {
+
+                    // TODO: Handle simpleContent with restictions
+                    if(type.getBaseType()!=null) {
+                        XSType baseType = type.getBaseType();
+                        if(baseType.asSimpleType()!=null) {
+                            logger.info("Is restriction: " + baseType.asSimpleType().isRestriction());
+                        }
+                    }
+
                     String subLocalName = LDHelper.resourceName(name);
                     String resourceURI = this.namespace+subLocalName;
+
                     boolean newResource = true;
 
                     if(this.dataset.containsNamedModel(resourceURI)) {
@@ -389,8 +401,9 @@ public class XSDParser {
                     if(this.dataset.containsNamedModel(predicateURI)) {
                         logger.debug("EXISTS ObjectProperty: "+predicateURI);
                     } else {
-                        Resource objectProperty = createResource(this.namespace, subLocalName, OWL.ObjectProperty);
+                        Resource objectProperty = createResource(this.namespace, LDHelper.propertyName(name), OWL.ObjectProperty);
                         objectProperty.addProperty(RDFS.range, subResource);
+                        objectProperty.addLiteral(RDFS.label, ResourceFactory.createLangLiteral(prefName,this.language));
                     }
 
                     if(newResource) {
@@ -402,6 +415,7 @@ public class XSDParser {
                     } else {
                         Resource datatypeProperty = createResource(this.namespace, localName, OWL.DatatypeProperty);
                         datatypeProperty.addProperty(RDFS.range,baseTypeToResource(type.getBaseType().getName()));
+                        datatypeProperty.addLiteral(RDFS.label, ResourceFactory.createLangLiteral(prefName,this.language));
                     }
                     convertSimpleType(type.asSimpleType(), propertyShape);
                 }
@@ -454,14 +468,15 @@ public class XSDParser {
         while(nit.hasNext()) {
             logger.debug(nit.next().asResource().getURI());
         }
-        /*
+
         Iterator<String> it = this.dataset.listNames();
         logger.debug("Empty: "+this.dataset.isEmpty());
+        /*
         logger.debug("GRAPHS:");
         while(it.hasNext()) {
             String graph = it.next();
             this.dataset.getNamedModel(graph).write(System.out,"TURTLE");
-        } */
+        }*/
     }
 
 
@@ -469,5 +484,19 @@ public class XSDParser {
         return this.dataset;
     }
 
+    public String getNamespace() {
+        return namespace;
+    }
 
+    public void setNamespace(final String namespace) {
+        this.namespace = namespace;
+    }
+
+    public String getLanguage() {
+        return language;
+    }
+
+    public void setLanguage(final String language) {
+        this.language = language;
+    }
 }
