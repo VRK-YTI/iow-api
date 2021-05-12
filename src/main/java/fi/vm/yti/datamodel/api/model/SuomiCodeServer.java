@@ -107,10 +107,11 @@ public class SuomiCodeServer {
         logger.debug("Updating suomi.fi codeLists: " + url);
 
         WebTarget target = client.target(url + "v1/coderegistries/").queryParam("format", "application/json");
+        logger.debug("Target: " + target.getUri().toString());
         Response response = target.request("application/json").get();
-
+        logger.debug("Status: " + response.getStatus());
         if (response.getStatusInfo().getFamily() == Response.Status.Family.SUCCESSFUL) {
-
+            logger.debug("Fetching codes successful");
             JsonReader jsonReader = Json.createReader(response.readEntity(InputStream.class));
             JsonObject registryListObject = jsonReader.readObject();
             jsonReader.close();
