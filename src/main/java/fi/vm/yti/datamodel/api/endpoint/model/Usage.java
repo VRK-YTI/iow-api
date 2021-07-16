@@ -87,6 +87,28 @@ public class Usage {
         namespaces.putAll(LDHelper.PREFIX_MAP);
         pss.setNsPrefixes(namespaces);
 
+        // wrap this in OPTIONAL if no specific resourceModel was given
+        String conceptResourceModelClause =
+            "?resource rdfs:isDefinedBy ?resourceModel . ";
+        if (modelIRI == null) {
+            conceptResourceModelClause = String.format("OPTIONAL { %s } ",
+                conceptResourceModelClause);
+        }
+
+        // wrap this in OPTIONAL if no specific usageModel was given
+        String resourceModelClause =
+            "?usage rdfs:isDefinedBy ?usageModel . "
+            + "GRAPH ?usageModel {"
+            + "?usageModel a ?usageModelType . "
+            + "?usageModel rdfs:label ?usageModelLabel . "
+            + "?usageModel dcap:preferredXMLNamespaceName ?usageNamespace . "
+            + "?usageModel dcap:preferredXMLNamespacePrefix ?usagePrefix . "
+            + "} ";
+        if (modelIRI == null) {
+            resourceModelClause = String.format("OPTIONAL { %s } ",
+                resourceModelClause);
+        }
+
         String conceptQueryString = "CONSTRUCT  { "
             + "?concept dcterms:isReferencedBy ?resource . "
             + "?concept skos:prefLabel ?prefLabel . "
@@ -105,7 +127,7 @@ public class Usage {
             + "?resource ?usageNamePredicate ?label . "
             + "VALUES ?usageNamePredicate { rdfs:label sh:name }"
             + "OPTIONAL { ?resource rdfs:comment ?comment . }"
-            + "OPTIONAL {?resource rdfs:isDefinedBy ?resourceModel . }"
+            + conceptResourceModelClause
             + "GRAPH ?resourceModel {"
             + "?resourceModel a ?modelType . "
             + "?resourceModel rdfs:label ?modelLabel . "
@@ -148,13 +170,7 @@ public class Usage {
             + "?usage ?usageNamePredicate ?usageLabel . "
             + "VALUES ?usageNamePredicate { rdfs:label sh:name }"
             + "}"
-            + "OPTIONAL {?usage rdfs:isDefinedBy ?usageModel . "
-            + "GRAPH ?usageModel {"
-            + "?usageModel a ?usageModelType . "
-            + "?usageModel rdfs:label ?usageModelLabel . "
-            + "?usageModel dcap:preferredXMLNamespaceName ?usageNamespace . "
-            + "?usageModel dcap:preferredXMLNamespacePrefix ?usagePrefix . "
-            + "}}"
+            + resourceModelClause
             + "FILTER(?usage!=?resource && ?subject!=?resource && ?usage!=?usageModel)"
             + "}";
 
@@ -204,12 +220,18 @@ public class Usage {
         if (resourceIRI != null) {
             pss.setCommandText(queryString);
             pss.setIri("resource", resourceIRI);
-        } else if (modelIRI != null) {
-            pss.setCommandText(modelQueryString);
-            pss.setIri("resourceModel", modelIRI);
+            if (modelIRI != null) {
+                pss.setIri("usageModel", modelIRI);
+            }
         } else if (conceptIRI != null) {
             pss.setCommandText(conceptQueryString);
             pss.setIri("concept", conceptIRI);
+            if (modelIRI != null) {
+                pss.setIri("resourceModel", modelIRI);
+            }
+        } else if (modelIRI != null) {
+            pss.setCommandText(modelQueryString);
+            pss.setIri("resourceModel", modelIRI);
         } else return jerseyResponseManager.invalidParameter();
 
         return jerseyClient.constructGraphFromService(pss.toString(), endpointServices.getCoreSparqlAddress());
